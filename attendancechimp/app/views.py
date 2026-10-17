@@ -35,7 +35,7 @@ def index(request):
 
 
 def time_view(request):
-    return HttpResponse(datetime.now(CDT).strftime("%H:%M"))
+    return HttpResponse(datetime.now(CDT).strftime('%H:%M'))
 
 
 def sum_view(request):
@@ -46,7 +46,7 @@ def sum_view(request):
     if total.is_integer():
         total = int(total)
         
-    return HttpResponse({"sum": total})
+    return HttpResponse(json.dumps({'sum': total}))
 
 # ---------------------------------------------------------------------------
 # HW4  — user creation
