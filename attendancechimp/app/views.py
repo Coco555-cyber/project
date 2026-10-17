@@ -39,7 +39,14 @@ def time_view(request):
 
 
 def sum_view(request):
-    return JsonResponse({"sum": float(request.GET.get('n1')) + float(request.GET.get('n2'))})
+    n1 = float(request.GET.get('n1'))
+    n2 = float(request.GET.get('n2'))
+    total = round(n1 + n2, 3)
+    
+    if total.is_integer():
+        total = int(total)
+        
+    return JsonResponse({"sum": total})
 
 # ---------------------------------------------------------------------------
 # HW4  — user creation
