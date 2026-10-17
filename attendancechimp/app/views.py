@@ -46,7 +46,7 @@ def sum_view(request):
     if total.is_integer():
         total = int(total)
         
-    return JsonResponse({"sum": total})
+    return HttpResponse({"sum": total})
 
 # ---------------------------------------------------------------------------
 # HW4  — user creation
