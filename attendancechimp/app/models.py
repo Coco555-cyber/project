@@ -116,9 +116,13 @@ class QRCodeUpload(models.Model):
     Fields:
         student: Student that uploaded the QR code
         lecture: Lecture associated with the uploaded QR code
+        qr_code: QR code
+        uploaded_at: Time of upload
     """
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE)
     lecture = models.ForeignKey(Lecture, on_delete=models.CASCADE, null=True, blank=True)
+    qr_code = models.ImageField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
 
 
