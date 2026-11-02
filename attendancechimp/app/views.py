@@ -60,6 +60,7 @@ def new_user_view(request):
     return render(request, 'app/new.html')
 
 
+@csrf_exempt
 def createUser(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
