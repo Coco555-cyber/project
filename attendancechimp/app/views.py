@@ -7,10 +7,12 @@ interact with the database via models.py, and return an HTTP response.
 
 from django.shortcuts import render, redirect
 from django.http import (HttpResponse, HttpResponseForbidden,
-                         HttpResponseBadRequest, JsonResponse)
+                         HttpResponseBadRequest, JsonResponse,
+                         HttpResponseNotAllowed)
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
+from app.models import InstructorProfile, StudentProfile
 from datetime import datetime
 import zoneinfo
 import json
@@ -29,8 +31,13 @@ CDT = zoneinfo.ZoneInfo("America/Chicago")
 
 def index(request):
     """Render the home page (index.html)."""
-
-    context = {}
+    curr_time = datetime.now(CDT).strftime('%H:%M')
+    
+    context = {
+        'curr_time': curr_time,
+        'user': request.user,
+    }
+    
     return render(request, 'app/index.html', context)
 
 
@@ -44,6 +51,29 @@ def sum_view(request):
     total = round(n1 + n2, 3)
     
     return HttpResponse(total)
+
+def createUser(request):
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+    
+    user_name = request.POST.get('user_name')
+    email = request.POST.get('email')
+    password = request.POST.get('password')
+    is_student = request.POST.get('is_student')
+    
+    if User.objects.filter(email=email).exists():
+        return HttpResponseBadRequest("Email is already registered.")
+    
+    user = User.objects.create_user(username=user_name, email=email, password=password)
+    
+    if is_student == '1':
+        StudentProfile.objects.create(user=user)
+    else:
+        InstructorProfile.objects.create(user=user)
+    
+    login(request, user)
+    
+    return HttpResponse("User created successfully.", status=200)
 
 # ---------------------------------------------------------------------------
 # HW4  — user creation

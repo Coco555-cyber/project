@@ -15,6 +15,15 @@
     <p>Electronic class attendance tracking application.</p>
     <hr>
 
+    <p>
+        {% if user.is_authenticated %}
+            <span class="username">{{ user.username }}</span>
+        {% else %}
+            Not logged in.
+        {% endif %}
+    </p>
+
+    <p>Current Time: {{ curr_time }}</p>
 </div>
 </body>
 </html>
