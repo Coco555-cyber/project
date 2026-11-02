@@ -18,7 +18,6 @@
     <div class="form-container">
         <h2>Sign Up for AttendanceChimp</h2>
         <form action="/app/createUser" method="POST">
-            {% csrf_token %}
             <div class="form-group">
                 <label for="user_name">Username:</label>
                 <input type="text" id="user_name" name="user_name" required>
