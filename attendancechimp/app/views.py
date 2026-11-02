@@ -52,6 +52,14 @@ def sum_view(request):
     
     return HttpResponse(total)
 
+
+def new_user_view(request):
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+    
+    return render(request, 'app/new.html')
+
+
 def createUser(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
