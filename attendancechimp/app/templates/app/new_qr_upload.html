@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload QR Code</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .form-container { max-width: 400px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="file"] { width: 100%; padding: 8px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Upload QR Code</h2>
+        <form action="/app/createQRCodeUpload" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="imageUpload">QR Code Image:</label>
+                <input type="file" id="imageUpload" name="imageUpload" required>
+            </div>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+</body>
+</html>
