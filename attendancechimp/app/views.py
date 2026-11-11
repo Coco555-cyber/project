@@ -174,7 +174,7 @@ def createQRCodeUpload(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
     
-    if not request.user.is_authenticated or not hasattr(request.user, 'instructorprofile'):
+    if not request.user.is_authenticated or not hasattr(request.user, 'studentprofile'):
         return HttpResponse('Unauthorized', status=401)
     
     image_file = request.FILES.get('imageUpload')
