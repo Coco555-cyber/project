@@ -106,41 +106,54 @@ def createCourse(request):
     
     if not request.user.is_authenticated or not hasattr(request.user, 'instructorprofile'):
         return HttpResponse('Unauthorized', status=401)
-    
-    course_code = request.POST.get('course')
-    course_name = request.POST.get('course-name')
-    start_time_str = request.POST.get('start-time')
-    end_time_str = request.POST.get('end-time')
-    
+
+    course_code = request.POST.get('course') or request.POST.get('course-name')
+    course_name = request.POST.get('course-name') or course_code
+    start_time_raw = request.POST.get('start-time') or request.POST.get('start_time')
+    end_time_raw = request.POST.get('end-time') or request.POST.get('end_time')
+
     if not course_code:
         return HttpResponseBadRequest('Missing course name/number.')
-    
+
     start_time_obj = None
+    if start_time_raw:
+        s = str(start_time_raw).strip()
+        for fmt in ('%H:%M', '%H:%M:%S'):
+            try:
+                start_time_obj = datetime.strptime(s, fmt).time()
+                break
+            except ValueError:
+                continue
+        else:
+            return HttpResponseBadRequest('Invalid start time format.')
+
     end_time_obj = None
-    
-    try:
-        if start_time_str:
-            start_time_obj = datetime.strptime(start_time_str.strip(), '%H:%M').time()
-        if end_time_str:
-            end_time_obj = datetime.strptime(end_time_str.strip(), '%H:%M').time()
-    except ValueError:
-        return HttpResponseBadRequest('Invalid time format; expected HH:MM.')
-    
+    if end_time_raw:
+        e = str(end_time_raw).strip()
+        for fmt in ('%H:%M', '%H:%M:%S'):
+            try:
+                end_time_obj = datetime.strptime(e, fmt).time()
+                break
+            except ValueError:
+                continue
+        else:
+            return HttpResponseBadRequest('Invalid end time format.')
+
     day_flags = {
-        'monday': bool(request.POST.get('day-mon')),
-        'tuesday': bool(request.POST.get('day-tue')),
-        'wednesday': bool(request.POST.get('day-wed')),
-        'thursday': bool(request.POST.get('day-thu')),
-        'friday': bool(request.POST.get('day-fri')),
+        'monday': bool(request.POST.get('day-mon') or request.POST.get('monday')),
+        'tuesday': bool(request.POST.get('day-tue') or request.POST.get('tuesday')),
+        'wednesday': bool(request.POST.get('day-wed') or request.POST.get('wednesday')),
+        'thursday': bool(request.POST.get('day-thu') or request.POST.get('thursday')),
+        'friday': bool(request.POST.get('day-fri') or request.POST.get('friday')),
     }
-    
+
     active_days = [label[:3].upper() for label, enabled in day_flags.items() if enabled]
     schedule_str = (
-        f'{start_time_str}-{end_time_str} ' + ','.join(active_days)
-        if start_time_str and end_time_str
+        f'{start_time_raw}-{end_time_raw} ' + ','.join(active_days)
+        if start_time_raw and end_time_raw
         else ''
     )
-    
+
     Course.objects.create(
         course=course_code,
         name=course_name,
@@ -150,7 +163,7 @@ def createCourse(request):
         endTime=end_time_obj,
         **day_flags,
     )
-    
+
     return HttpResponse('Course created successfully.', status=200)
 
 
