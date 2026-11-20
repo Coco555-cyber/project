@@ -12,7 +12,7 @@ from django.http import (HttpResponse, HttpResponseForbidden,
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
-from app.models import InstructorProfile, StudentProfile, Course, Lecture, QRCodeUpload
+from app.models import InstructorProfile, StudentProfile, Course, Lecture, QRCodeUpload, getUploadsForCourse
 from datetime import datetime
 import zoneinfo
 import json
@@ -107,22 +107,48 @@ def createCourse(request):
     if not request.user.is_authenticated or not hasattr(request.user, 'instructorprofile'):
         return HttpResponse('Unauthorized', status=401)
     
+    course_code = request.POST.get('course')
     course_name = request.POST.get('course-name')
-    start_time = request.POST.get('start-time')
-    end_time = request.POST.get('end-time')
-    days = []
+    start_time_str = request.POST.get('start-time')
+    end_time_str = request.POST.get('end-time')
     
-    for day in ['day-mon', 'day-tue', 'day-wed', 'day-thu', 'day-fri']:
-        if request.POST.get(day):
-            days.append(day.replace('day-', '').upper())
+    if not course_code:
+        return HttpResponseBadRequest('Missing course name/number.')
     
-    schedule_str = f'{start_time}-{end_time} ' + ','.join(days) if start_time and end_time else ''
-    instructor_profile = InstructorProfile.objects.get(user=request.user)
+    start_time_obj = None
+    end_time_obj = None
+    
+    try:
+        if start_time_str:
+            start_time_obj = datetime.strptime(start_time_str.strip(), '%H:%M').time()
+        if end_time_str:
+            end_time_obj = datetime.strptime(end_time_str.strip(), '%H:%M').time()
+    except ValueError:
+        return HttpResponseBadRequest('Invalid time format; expected HH:MM.')
+    
+    day_flags = {
+        'monday': bool(request.POST.get('day-mon')),
+        'tuesday': bool(request.POST.get('day-tue')),
+        'wednesday': bool(request.POST.get('day-wed')),
+        'thursday': bool(request.POST.get('day-thu')),
+        'friday': bool(request.POST.get('day-fri')),
+    }
+    
+    active_days = [label[:3].upper() for label, enabled in day_flags.items() if enabled]
+    schedule_str = (
+        f'{start_time_str}-{end_time_str} ' + ','.join(active_days)
+        if start_time_str and end_time_str
+        else ''
+    )
     
     Course.objects.create(
+        course=course_code,
         name=course_name,
-        instructor=instructor_profile,
-        schedule=schedule_str
+        instructor=request.user.instructorprofile,
+        schedule=schedule_str,
+        startTime=start_time_obj,
+        endTime=end_time_obj,
+        **day_flags,
     )
     
     return HttpResponse('Course created successfully.', status=200)
@@ -139,15 +165,15 @@ def new_lecture_view(request):
 def createLecture(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
+    if not request.user.is_authenticated or not hasattr(request.user, 'instructorprofile'):
+        return HttpResponse('Unauthorized', status=401)
     
-    if not request.user.is_authenticated or not hasattr(request.user, 'instructorprofile'): 
-        return HttpResponse("Unauthorized", status=401)
+    choice = request.POST.get('choice')
+    if not choice:
+        return HttpResponseBadRequest('Missing course choice.')
     
-    course_name = request.POST.get('choice')
-    
-    try:
-        course = Course.objects.get(name=course_name)
-    except Course.DoesNotExist:
+    course = Course.objects.filter(course=choice).first() or Course.objects.filter(name=choice).first()
+    if not course:
         return HttpResponseBadRequest('Course not found.')
     
     qr_id = str(uuid.uuid4())
@@ -156,7 +182,7 @@ def createLecture(request):
     Lecture.objects.create(
         course=course,
         date=lecture_date,
-        qr_identifier=qr_id
+        qr_identifier=qr_id,
     )
     
     return HttpResponse('Lecture created successfully.', status=200)
@@ -213,6 +239,40 @@ def dumpUploads(request):
 # ---------------------------------------------------------------------------
 # HW6  — getUploads
 # ---------------------------------------------------------------------------
-
+def getUploads(request):
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+    
+    if not request.user.is_authenticated or not hasattr(request.user, 'instructorprofile'):
+        return HttpResponse('Unauthorized', status=401)
+    
+    course = request.GET.get('course')
+    if not course:
+        return JsonResponse({'error': 'Missing course parameter'}, status=400)
+    
+    uploads = getUploadsForCourse(course)
+    result = []
+    
+    for upload in uploads:
+        ts = upload.uploaded_at
+        if ts is not None:
+            if ts.tzinfo is not None:
+                ts = ts.astimezone(CDT)
+            else:
+                ts = ts.replace(tzinfo=CDT)
+            formatted_time = ts.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            formatted_time = ''
+        
+        username = ''
+        if upload.student and upload.student.user:
+            username = upload.student.user.username
+        
+        result.append({
+            'username': username,
+            'upload_time': formatted_time,
+        })
+    
+    return JsonResponse(result, safe=False)
 
 

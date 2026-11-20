@@ -18,10 +18,13 @@ Entities
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 import logging
 import string
 import random
+from datetime import datetime, time
+import zoneinfo
 
 logger = logging.getLogger(__name__) # set up tracking, auditing, and debugging
                                                                # allows using logger.warning(), logger.error(), 
@@ -69,6 +72,14 @@ class Course(models.Model):
     name = models.CharField(max_length=50)
     instructor = models.ForeignKey(InstructorProfile, on_delete=models.CASCADE)
     schedule = models.CharField(max_length=100)
+    course = models.CharField(max_length=50)
+    startTime = models.TimeField()
+    endTime = models.TimeField()
+    mon = models.BooleanField(default=False)
+    tue = models.BooleanField(default=False)
+    wed = models.BooleanField(default=False)
+    thu = models.BooleanField(default=False)
+    fri = models.BooleanField(default=False)
 
 
 
@@ -142,3 +153,58 @@ def get_user_role(user):
     return None
 
 
+
+def getUploadsForCourse(course):
+    """
+    Return a list of valid QRCodeUpload objects for the given course number.
+    """
+    course_obj = Course.objects.filter(course=course).first()
+    if not course_obj:
+        return []
+    
+    start_val = getattr(course_obj, "startTime", None)
+    end_val = getattr(course_obj, "endTime", None)
+    
+    if start_val:
+        start_val = datetime.strptime(start_val.strip(), "%H:%M").time()
+    if end_val:
+        end_val = datetime.strptime(end_val.strip(), "%H:%M").time()
+    if not isinstance(start_val, time) or not isinstance(end_val, time):
+        return []
+    
+    day_attr_by_weekday = {
+        0: "monday",
+        1: "tuesday",
+        2: "wednesday",
+        3: "thursday",
+        4: "friday",
+    }
+    
+    uploads = (
+        QRCodeUpload.objects.filter(lecture__course=course_obj)
+        .select_related("lecture", "lecture__course", "student")
+        .order_by("uploaded_at")
+    )
+    
+    local_time = zoneinfo.ZoneInfo("America/Chicago")
+    valid_uploads = []
+    
+    for upload in uploads:
+        if upload.uploaded_at is None:
+            continue
+        
+        ts = upload.uploaded_at
+        if timezone.is_aware(ts):
+            ts = ts.astimezone(local_time)
+        else:
+            ts = ts.replace(tzinfo=local_time)
+        
+        day_attr = day_attr_by_weekday.get(ts.weekday())
+        if not day_attr or not getattr(course_obj, day_attr, False):
+            continue
+        
+        upload_time = ts.time()
+        if start_val <= upload_time <= end_val:
+            valid_uploads.append(upload)
+    
+    return valid_uploads
