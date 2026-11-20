@@ -75,11 +75,11 @@ class Course(models.Model):
     course = models.CharField(max_length=50)
     startTime = models.TimeField()
     endTime = models.TimeField()
-    mon = models.BooleanField(default=False)
-    tue = models.BooleanField(default=False)
-    wed = models.BooleanField(default=False)
-    thu = models.BooleanField(default=False)
-    fri = models.BooleanField(default=False)
+    monday = models.BooleanField(default=False)
+    tuesday = models.BooleanField(default=False)
+    wednesday = models.BooleanField(default=False)
+    thursday = models.BooleanField(default=False)
+    friday = models.BooleanField(default=False)
 
 
 
@@ -165,9 +165,9 @@ def getUploadsForCourse(course):
     start_val = getattr(course_obj, "startTime", None)
     end_val = getattr(course_obj, "endTime", None)
     
-    if start_val:
+    if isinstance(start_val, str) and start_val.strip():
         start_val = datetime.strptime(start_val.strip(), "%H:%M").time()
-    if end_val:
+    if isinstance(end_val, str) and end_val.strip():
         end_val = datetime.strptime(end_val.strip(), "%H:%M").time()
     if not isinstance(start_val, time) or not isinstance(end_val, time):
         return []
